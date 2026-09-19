@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     "/Users/vincent/C++代码库/build/day8-10_map"
+relocations:     []
+...
