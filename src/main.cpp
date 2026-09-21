@@ -137,8 +137,6 @@ bool commandToDirection(
 }
 
 void generateObstacles (
-    //这里的void指的是不需要反馈值，该函数的唯一作用就是修改map
-    //对于void，不需要返回值
     Grid& grid,
     int obstacleTarget
 ){
@@ -158,7 +156,7 @@ void generateObstacles (
 }
 
 void renderMap(
-    Grid& grid,
+    const Grid& grid,
     Position robot,
     Position target
 ){
@@ -208,15 +206,12 @@ int main()
     );
 
     Position robot = generateFreePosition(grid);
-    Position target = generateFreePosition(grid);  
+    Position target;
 
-
-    if (
-        isSamePosition(robot,target)
-    ){
-        Position target = 
-        generateFreePosition(grid);
-    }
+    //使用do……while程序，防止Variable Shadowing
+    do {
+        target = generateFreePosition(grid);
+    } while (isSamePosition(robot, target));
 
 
     while (true) {
@@ -226,7 +221,7 @@ int main()
                   << robot.row << ", "
                   << robot.col << ")\n";
 
-        std::cout << "请输入 W/A/S/D 移动，Q 退出：";
+        std::cout << "请输入 W/A/S/D 移动, Q 退出：";
 
         char command;
         std::cin >> command;
@@ -236,42 +231,21 @@ int main()
             break;
         }
 
-        Direction direction = Direction::Up;
-        bool hasValidDirection = true;
+        Direction direction;
 
-        switch (command) {
-            case 'w':
-            case 'W':
-                direction = Direction::Up;
-                break;
-
-            case 's':
-            case 'S':
-                direction = Direction::Down;
-                break;
-
-            case 'a':
-            case 'A':
-                direction = Direction::Left;
-                break;
-
-            case 'd':
-            case 'D':
-                direction = Direction::Right;
-                break;
-
-            default:
-                hasValidDirection = false;
-                break;
-        }
-
-        if (!hasValidDirection) {
+        if (!commandToDirection(command, direction)) {
             std::cout << "未知命令，请重新输入\n\n";
             continue;
         }
 
         if (tryMove(grid, robot, direction)) {
-            std::cout << "移动成功\n\n";
+             std::cout << "移动成功\n\n";
+
+            if (isSamePosition(robot, target)) {
+                renderMap(grid, robot, target);
+                std::cout << "机器人已到达目标，导航成功！\n";
+                break;
+            }
         }
         else {
             std::cout << "移动失败：目标位置越界或存在障碍物\n\n";
