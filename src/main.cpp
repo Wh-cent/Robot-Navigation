@@ -193,6 +193,91 @@ void renderMap(
     }
 }
 
+std::vector<Position> path{
+    {5, 2},
+    {5, 3},
+    {4, 3},
+    {4, 4},
+    {4, 5},
+    {5, 5},
+    {5, 6}
+};
+
+bool stepToDirection(
+    Position current,
+    Position next,
+    Direction& direction
+) {
+    int rowDifference = next.row - current.row;
+    int colDifference = next.col - current.col;
+
+    if (rowDifference == -1 && colDifference == 0) {
+        direction = Direction::Up;
+        return true;
+    }
+
+    if (rowDifference == 1 && colDifference == 0) {
+        direction = Direction::Down;
+        return true;
+    }
+
+    if (rowDifference == 0 && colDifference == -1) {
+        direction = Direction::Left;
+        return true;
+    }
+
+    if (rowDifference == 0 && colDifference == 1) {
+        direction = Direction::Right;
+        return true;
+    }
+
+    return false;
+}
+
+bool executePath(
+    const Grid& grid,
+    Position& robot,
+    const std::vector<Position>& path
+) {
+    if (path.empty()) {
+        std::cout << "路径为空，无法执行\n";
+        return false;
+    }
+
+    if (!isSamePosition(robot, path.front())) {
+        std::cout << "机器人不在路径起点\n";
+        return false;
+    }
+
+    for (std::size_t i = 1; i < path.size(); i++) {
+        Direction direction = Direction::Up;
+
+        bool validStep = stepToDirection(
+            robot,
+            path[i],
+            direction
+        );
+
+        if (!validStep) {
+            std::cout << "路径中的这一步不合法，停止执行\n";
+            return false;
+        }
+
+        bool moved = tryMove(grid, robot, direction);
+
+        if (!moved) {
+            std::cout << "下一格越界或存在障碍，停止执行\n";
+            return false;
+        }
+
+        std::cout << "已到达：("
+                  << robot.row << ", "
+                  << robot.col << ")\n";
+    }
+
+    return true;
+}
+
 int main()
 {
     Grid grid(
@@ -200,56 +285,27 @@ int main()
         std::vector<Cell>(COLS, Cell::Free)
     );
 
+    Position robot{5, 2};
+    Position target = {5, 6};
+
     generateObstacles (
         grid,
         20
     );
 
-    Position robot = generateFreePosition(grid);
-    Position target;
+    renderMap(grid, robot, target);
 
-    //使用do……while程序，防止Variable Shadowing
-    do {
-        target = generateFreePosition(grid);
-    } while (isSamePosition(robot, target));
+    bool completed = executePath(grid, robot, path);
 
+    renderMap(grid, robot, target);
 
-    while (true) {
-        renderMap(grid, robot, target);
-
-        std::cout << "机器人位置：("
-                  << robot.row << ", "
-                  << robot.col << ")\n";
-
-        std::cout << "请输入 W/A/S/D 移动, Q 退出：";
-
-        char command;
-        std::cin >> command;
-
-        if (command == 'q' || command == 'Q') {
-            std::cout << "导航结束\n";
-            break;
-        }
-
-        Direction direction;
-
-        if (!commandToDirection(command, direction)) {
-            std::cout << "未知命令，请重新输入\n\n";
-            continue;
-        }
-
-        if (tryMove(grid, robot, direction)) {
-             std::cout << "移动成功\n\n";
-
-            if (isSamePosition(robot, target)) {
-                renderMap(grid, robot, target);
-                std::cout << "机器人已到达目标，导航成功！\n";
-                break;
-            }
-        }
-        else {
-            std::cout << "移动失败：目标位置越界或存在障碍物\n\n";
-        }
+    if (completed && isSamePosition(robot, target)) {
+        std::cout << "人工路径执行完成，机器人到达目标\n";
+    }
+    else {
+        std::cout << "未到达目标，机器人停在：("
+                << robot.row << ", "
+                << robot.col << ")\n";
     }
 
     return 0;

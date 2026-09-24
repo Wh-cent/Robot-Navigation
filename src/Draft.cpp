@@ -1180,257 +1180,431 @@
 
 
 
-#include<iostream>
-#include<random>
-#include<vector>
+// #include<iostream>
+// #include<random>
+// #include<vector>
 
-int randomInt (int minValue, int maxValue){
-    static std::random_device randomDevice;
-    static std::mt19937 randomEngine (randomDevice());
-    std::uniform_int_distribution<int> distribution(minValue,maxValue);
+// int randomInt (int minValue, int maxValue){
+//     static std::random_device randomDevice;
+//     static std::mt19937 randomEngine (randomDevice());
+//     std::uniform_int_distribution<int> distribution(minValue,maxValue);
 
-    return distribution(randomEngine);
-}
+//     return distribution(randomEngine);
+// }
 
-const int ROWS = 10;
-const int COLS = 10;
+// const int ROWS = 10;
+// const int COLS = 10;
 
-struct Position{
-    int row;
-    int col;
-};
+// struct Position{
+//     int row;
+//     int col;
+// };
 
-enum class Cell{
-    Free,
-    Obstacle
-};
+// enum class Cell{
+//     Free,
+//     Obstacle
+// };
 
-enum class Direction{
-    Up,
-    Down,
-    Left,
-    Right
-};
+// enum class Direction{
+//     Up,
+//     Down,
+//     Left,
+//     Right
+// };
 
-using Grid = std::vector<std::vector<Cell>>;
-
-
-bool isInsideMap(Position a){
-    return a.row>=0 &&
-           a.col>=0 &&
-           a.row < ROWS &&
-           a.col < COLS;
-}
-
-bool isWalkable (
-    const Grid& grid ,
-    Position position
-){
-    return isInsideMap(position) && 
-           grid[position.row][position.col]==Cell::Free;
-}
+// using Grid = std::vector<std::vector<Cell>>;
 
 
-Position generateFreePosition(
-    const Grid& grid
-){
-    Position position{
-        randomInt(0,ROWS-1),
-        randomInt(0,COLS-1)
-    };
-    while(!isWalkable(grid,position)){
+// bool isInsideMap(Position a){
+//     return a.row>=0 &&
+//            a.col>=0 &&
+//            a.row < ROWS &&
+//            a.col < COLS;
+// }
 
-        position.row = randomInt(0,ROWS-1);
-        position.col = randomInt(0,COLS-1);
-    }
-
-    return position;
-}
-
-
-bool isSamePosition (Position a , Position b){
-    return a.row == b.row && a.col == b.col;
-}
+// bool isWalkable (
+//     const Grid& grid ,
+//     Position position
+// ){
+//     return isInsideMap(position) && 
+//            grid[position.row][position.col]==Cell::Free;
+// }
 
 
-Position calculateNextPosition(Position current, Direction direction)
-{
-    Position next = current;
+// Position generateFreePosition(
+//     const Grid& grid
+// ){
+//     Position position{
+//         randomInt(0,ROWS-1),
+//         randomInt(0,COLS-1)
+//     };
+//     while(!isWalkable(grid,position)){
 
-    switch (direction) {
-        case Direction::Up:
-            next.row--;
-            break;
-        case Direction::Down:
-            next.row++;
-            break;
-        case Direction::Left:
-            next.col--;
-            break;
-        case Direction::Right:
-            next.col++;
-            break;
-    }
+//         position.row = randomInt(0,ROWS-1);
+//         position.col = randomInt(0,COLS-1);
+//     }
 
-    return next;
-}
+//     return position;
+// }
 
-bool tryMove(const Grid& grid, Position& robot, Direction direction)
-{
-    Position next = calculateNextPosition(robot, direction);
 
-    if (!isWalkable(grid, next)) {
-        return false;
-    }
+// bool isSamePosition (Position a , Position b){
+//     return a.row == b.row && a.col == b.col;
+// }
 
-    robot = next;
-    return true;
-}
 
-bool commandToDirection(
-    char command,
-    Direction& direction
-) {
-    switch (command) {
-        case 'w':
-        case 'W':
-            direction = Direction::Up;
-            return true;
+// Position calculateNextPosition(Position current, Direction direction)
+// {
+//     Position next = current;
 
-        case 's':
-        case 'S':
-            direction = Direction::Down;
-            return true;
+//     switch (direction) {
+//         case Direction::Up:
+//             next.row--;
+//             break;
+//         case Direction::Down:
+//             next.row++;
+//             break;
+//         case Direction::Left:
+//             next.col--;
+//             break;
+//         case Direction::Right:
+//             next.col++;
+//             break;
+//     }
 
-        case 'a':
-        case 'A':
-            direction = Direction::Left;
-            return true;
+//     return next;
+// }
 
-        case 'd':
-        case 'D':
-            direction = Direction::Right;
-            return true;
+// bool tryMove(const Grid& grid, Position& robot, Direction direction)
+// {
+//     Position next = calculateNextPosition(robot, direction);
 
-        default:
-            return false;
-    }
-}
+//     if (!isWalkable(grid, next)) {
+//         return false;
+//     }
 
-void generateObstacles (
-    Grid& grid,
-    int obstacleTarget
-){
-    int obstacleNum = 0;
+//     robot = next;
+//     return true;
+// }
 
-    while (obstacleNum < obstacleTarget){
+// bool commandToDirection(
+//     char command,
+//     Direction& direction
+// ) {
+//     switch (command) {
+//         case 'w':
+//         case 'W':
+//             direction = Direction::Up;
+//             return true;
 
-        int r = randomInt(0,ROWS-1);
-        int c = randomInt(0,COLS-1);
+//         case 's':
+//         case 'S':
+//             direction = Direction::Down;
+//             return true;
 
-        if (grid[r][c] == Cell::Free){
+//         case 'a':
+//         case 'A':
+//             direction = Direction::Left;
+//             return true;
 
-            grid[r][c] = Cell::Obstacle;
-            obstacleNum ++; 
-        }
-    }
-}
+//         case 'd':
+//         case 'D':
+//             direction = Direction::Right;
+//             return true;
 
-void renderMap(
-    const Grid& grid,
-    Position robot,
-    Position target
-){
-    for (int r = 0; r < ROWS; r++) {
+//         default:
+//             return false;
+//     }
+// }
 
-        for (int c = 0; c < COLS; c++) {
+// bool stepToDirection(
+//     Position current,
+//     Position next,
+//     Direction& direction
+// ) {
+//     int rowDifference = next.row - current.row;
+//     int colDifference = next.col - current.col;
 
-            if (
-                r == robot.row && 
-                c == robot.col
-            ){
-                std::cout << 'R';
-            }
+//     if (rowDifference == -1 && colDifference == 0) {
+//         direction = Direction::Up;
+//         return true;
+//     }
+
+//     if (rowDifference == 1 && colDifference == 0) {
+//         direction = Direction::Down;
+//         return true;
+//     }
+
+//     if (rowDifference == 0 && colDifference == -1) {
+//         direction = Direction::Left;
+//         return true;
+//     }
+
+//     if (rowDifference == 0 && colDifference == 1) {
+//         direction = Direction::Right;
+//         return true;
+//     }
+
+//     return false;
+// }
+
+// bool executePath(
+//     const Grid& grid,
+//     Position& robot,
+//     const std::vector<Position>& path
+// ) {
+//     if (path.empty()) {
+//         std::cout << "路径为空，无法执行\n";
+//         return false;
+//     }
+
+//     if (!isSamePosition(robot, path.front())) {
+//         std::cout << "机器人当前位置与路径起点不一致\n";
+//         return false;
+//     }
+
+//     for (std::size_t i = 1; i < path.size(); i++) {
+//         Direction direction;
+
+        
+//     if (!stepToDirection(robot, path[i], direction)) {
+//         std::cout << "路径中的两个位置不相邻，停止执行\n";
+//         return false;
+//     }
+
+//     if (!tryMove(grid, robot, direction)) {
+//         std::cout << "下一步存在障碍或超出地图，停止执行\n";
+//         return false;
+//     }
+
+//     std::cout << "已到达：("
+//             << robot.row << ", "
+//             << robot.col << ")\n";
+//     }
+
+//     return true;
+// }
+
+// void generateObstacles (
+//     Grid& grid,
+//     int obstacleTarget
+// ){
+//     int obstacleNum = 0;
+
+//     while (obstacleNum < obstacleTarget){
+
+//         int r = randomInt(0,ROWS-1);
+//         int c = randomInt(0,COLS-1);
+
+//         if (grid[r][c] == Cell::Free){
+
+//             grid[r][c] = Cell::Obstacle;
+//             obstacleNum ++; 
+//         }
+//     }
+// }
+
+// void renderMap(
+//     const Grid& grid,
+//     Position robot,
+//     Position target
+// ){
+//     for (int r = 0; r < ROWS; r++) {
+
+//         for (int c = 0; c < COLS; c++) {
+
+//             if (
+//                 r == robot.row && 
+//                 c == robot.col
+//             ){
+//                 std::cout << 'R';
+//             }
             
-            else if (
-                r == target.row && 
-                c == target.col
-            ){
-                std::cout << 'T';
-            }
+//             else if (
+//                 r == target.row && 
+//                 c == target.col
+//             ){
+//                 std::cout << 'T';
+//             }
             
-            else if (
-                grid[r][c] == Cell::Obstacle
-            ){
-                std::cout << '#';
-            }
+//             else if (
+//                 grid[r][c] == Cell::Obstacle
+//             ){
+//                 std::cout << '#';
+//             }
             
-            else {
-                std::cout << '.';
-            }
+//             else {
+//                 std::cout << '.';
+//             }
 
-        }
-            std::cout << '\n';
-    }
-}
+//         }
+//             std::cout << '\n';
+//     }
+// }
 
-int main()
-{
-    Grid grid(
-        ROWS,
-        std::vector<Cell>(COLS, Cell::Free)
-    );
+// int main()
+// {
+//     Grid grid(
+//         ROWS,
+//         std::vector<Cell>(COLS, Cell::Free)
+//     );
 
-    Position robot{5, 2};
-    Position target{5, 6};
+//     Position robot{5, 2};
+//     Position target{5, 6};
 
-    std::vector<Position> path{
-        {5, 2},
-        {5, 3},
-        {4, 3},
-        {4, 4},
-        {4, 5},
-        {5, 5},
-        {5, 6}
-    };
+//     std::vector<Position> path{
+//         {5, 2},
+//         {5, 3},
+//         {4, 3},
+//         {4, 4},
+//         {4, 5},
+//         {5, 5},
+//         {5, 6}
+//     };
 
-    while (true) {
-        renderMap(grid, robot, target);
+//     while (true) {
+//         renderMap(grid, robot, target);
 
-        std::cout << "机器人位置：("
-                  << robot.row << ", "
-                  << robot.col << ")\n";
+//         std::cout << "机器人位置：("
+//                   << robot.row << ", "
+//                   << robot.col << ")\n";
 
-        std::cout << "请输入 W/A/S/D 移动, Q 退出：";
+//         std::cout << "请输入 W/A/S/D 移动, Q 退出：";
 
-        char command;
-        std::cin >> command;
+//         char command;
+//         std::cin >> command;
 
-        if (command == 'q' || command == 'Q') {
-            std::cout << "导航结束\n";
-            break;
-        }
+//         if (command == 'q' || command == 'Q') {
+//             std::cout << "导航结束\n";
+//             break;
+//         }
 
-        Direction direction;
+//         Direction direction;
 
-        if (!commandToDirection(command, direction)) {
-            std::cout << "未知命令，请重新输入\n\n";
-            continue;
-        }
+//         if (!commandToDirection(command, direction)) {
+//             std::cout << "未知命令，请重新输入\n\n";
+//             continue;
+//         }
 
-        if (tryMove(grid, robot, direction)) {
-             std::cout << "移动成功\n\n";
+//         if (tryMove(grid, robot, direction)) {
+//              std::cout << "移动成功\n\n";
 
-            if (isSamePosition(robot, target)) {
-                renderMap(grid, robot, target);
-                std::cout << "机器人已到达目标，导航成功！\n";
-                break;
-            }
-        }
-        else {
-            std::cout << "移动失败：目标位置越界或存在障碍物\n\n";
-        }
-    }
+//             if (isSamePosition(robot, target)) {
+//                 renderMap(grid, robot, target);
+//                 std::cout << "机器人已到达目标，导航成功！\n";
+//                 break;
+//             }
+//         }
+//         else {
+//             std::cout << "移动失败：目标位置越界或存在障碍物\n\n";
+//         }
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
+
+
+// #include<iostream>
+
+
+// const int ROWS = 10;
+// const int COLS = 10;
+
+// enum class Cell{
+//     Free,
+//     Obstacles
+// };
+
+// struct Position{
+//     int row;
+//     int col;
+// };
+
+// enum class Direction{
+//     Up,
+//     Down,
+//     Left,
+//     Right
+// };
+
+// using Grid = 
+//     std::vector<std::vector<Cell>>;
+
+// bool isInsideMap(
+//     Position position
+// ){
+//     return position.row >= 0 &&
+//            position.row < ROWS &&
+//            position.col >=0 &&
+//            position.col < COLS;
+// }
+
+// bool isWalkbale(
+//     const Grid& grid, 
+//     Position position
+// ){
+//     return isInsideMap(position) && 
+//            grid[position.row][position.col] == Cell::Free;
+// }
+
+
+// bool commandToDirection(
+//     char command,
+//     Direction& direction
+// ){
+//     switch (command){
+//         case 'w':
+//         case 'W':
+//             direction = Direction::Up;
+//             return true;
+
+//         case 's':
+//         case 'S':
+//             direction = Direction::Down;
+//             return true;
+
+//         case 'a':
+//         case 'A':
+//             direction = Direction::Left;
+//             return true;
+
+//         case 'd':
+//         case 'D':
+//             direction = Direction::Right;
+//             return true;
+
+//         default:
+//             return false;
+// }
+
+// Position calculateNextPosition(
+//     Position current, 
+//     Direction direction
+// ){
+//     Position next = current;
+//     switch (direction){
+//         case Direction::Up:
+//             next.row --;
+//             break;
+//         case Direction::Down:
+//             next.row ++;
+//             break;
+//         case Direction::Left:
+//             next.col --;
+//             break;
+//         case Direction::Right:
+//             next.row ++;
+//             break;
+//     }
+
+//     return next;
+// }
+
+
+// bool tryMove(
+//     const Grid& grid, 
+//     Position robot, 
+//     Direction direction
+// ){
+    
+// }
