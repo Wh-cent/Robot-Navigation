@@ -278,6 +278,39 @@ bool executePath(
     return true;
 }
 
+std::vector<Position> getWalkableNeighbors(
+    const Grid& grid,
+    Position current
+) {
+    std::vector<Position> neighbors;
+
+    if (!isWalkable(grid, current)) {
+        return neighbors;
+    }
+
+    const std::vector<Direction> directions{
+        Direction::Up,
+        Direction::Down,
+        Direction::Left,
+        Direction::Right
+    };
+
+    for (std::size_t i = 0; i < directions.size(); i++) {
+        Direction direction = directions[i];
+
+        Position next = calculateNextPosition(
+            current,
+            direction
+        );
+
+        if (isWalkable(grid, next)) {
+            neighbors.push_back(next);
+        }
+    }
+
+    return neighbors;
+}
+
 int main()
 {
     Grid grid(
@@ -285,13 +318,36 @@ int main()
         std::vector<Cell>(COLS, Cell::Free)
     );
 
-    Position robot{5, 2};
+    Position robot = {5, 2};
     Position target = {5, 6};
 
     generateObstacles (
         grid,
         20
     );
+
+    grid[4][2] = Cell::Obstacle;
+    grid[5][3] = Cell::Obstacle;
+
+    std::vector<Position> neighbors =
+        getWalkableNeighbors(grid, robot);
+
+    std::cout << "合法邻居数量："
+              << neighbors.size() << '\n';
+
+    for (std::size_t i = 0; i < neighbors.size(); i++) {
+        Position neighbor = neighbors[i];
+
+        std::cout << '('
+                  << neighbor.row << ", "
+                  << neighbor.col << ")\n";
+    }
+
+    std::cout << "机器人仍在：("
+              << robot.row << ", "
+              << robot.col << ")\n";
+
+
 
     renderMap(grid, robot, target);
 
