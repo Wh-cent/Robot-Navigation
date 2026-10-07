@@ -1,5 +1,13 @@
 程序 LOGIC
 
+# 前言：
+该轮短暂的学习有90%都是ChatGPT推进的，越到后期，越发觉其中的不对劲：ChatGPT在教学简洁易懂、中文使用习惯方面都不如DeepSeekV4。
+我正在排除以下情况：
+1.是否是我预设的ChatGPT人格出了问题
+2.发生了error累计问题，
+
+总之我曾经一度认为是我理解力的问题，但DeepSeekV4在后期的学习过程中，总能以更高效、无需预设教学性格、近乎一遍就让我明白的方式，推进项目进度
+
 # Part 1: 前置内容
 
 目前，地图的ROWS与COLS属于“手动输入不变量”
@@ -87,6 +95,10 @@
 }   输出：未来预期坐标信息
 
 
+## directionToText
+这个函数就是一个功能性函数，只要单一的输入一个方向，然后自动的在函数内部通过switch case把它翻译成中文字符就行了，然后最后再预设一个未知符号
+
+
 ## tryMove
 - 目的：基于未来预期坐标信息，判断该坐标是否合理，若合理，则赋值给 robot
 
@@ -97,6 +109,8 @@
     使用 isWalkable 判断该预期坐标是否合理
     - 若合理，则赋值给外部robot坐标
     - 若不合理，则返回「否」
+
+    新增的内容是对不同的错误报告做一个更加具体的划分，以及最后的输出上，让整个函数的输出更加透明：一开始的坐标是什么？方向是什么？那么预期的坐标是什么？是否执行成功了，输出它执行后的坐标，最后再解释一下成功/失败的原因
 
 }   输出：bool值「有概率修改外部坐标信息」
 
@@ -184,6 +198,160 @@
 
 }   输出：向量组neighbors
 
+
+## canReach
+- 目的：判断在不预定路径的情况下，robot是否能从起始点走到目的地，即判断robot这一路上有没有合法解
+
+- 逻辑：输入（
+    要判断，肯定要看地图，以及起始点与目的地的坐标信息
+）{
+    首先，进行预处理：
+    先判断起始点与目的地的坐标上是否存在障碍物或者超过地图边界，也就是是否能够正常行动，用iswalkable判断，外部套上if与！，用或逻辑串上两层判断，只有当两层判断都正常时，该if才不会运行返回false
+
+    然后初始化一个队列，名为pending，里面装position信息，顾名思义，是储存需要被处理但由于外部判断先放进来存着的储存器
+    对于该队列，与正常的vector组是不完全一致的？
+
+    然后初始化一个二维向量组，存放bool值，相当于是对grid的独立性质渲染，名为discovered，初始化时所有格子里都是false，因为都还没有被发现过
+
+    然后，我们将起始点的discovered改为true，把起始点坐标push进pending中，此处就是与vector不一样的，queue似乎默认把新的东西push到最后面，也就是在执行效果上。与push_back一致「先改后放」
+
+    然后进入一个while循环，该循环是条件语句为真时进行；于是，如果pending里面没有空，！就是true，就会执行while：
+    - 我们取出pending第一个格子里的东西，pending.front（），将其储存在current中。作为一个临时处理器，然后使用pop（）把第一个格子里的东西删掉「先取后删」
+    - 文字提示当前正在处理哪一个current的坐标，透明化
+    - 有一个同位判断，如果当下取出来的current正好是target一致的位置，就直接结束整个函数，返回true，如果不是就继续判断，那为何这个判断要放在这个位置呢？？
+    - 利用getWalkableNeighbors获得current四周合法的格子然后将这个获得的格子作为遍历的锚点，把一个个合法的邻居格子暂时存放进next中，然后重新上方if判别是否discover，这里的discovered就合grid的使用方式一样
+
+    如果最后循环到pending空了，还是没有sameposition，说明到不了，最后就直接返回一个false就行
+
+}   输出：bool值/独立渲染
+
+
+## shortestSteps
+- 目的：发现从起始点到目的地的最短步数
+
+- 逻辑：输入（
+    和canReach一致
+）{
+    基本与canReach是一致的，从一开始的预处理，到pending初始化，到记录false的独立性质渲染，再到预先判断起始点，再利用pending空不空去while循环，去循环push/pop next到pending中，并修改false渲染层，最后如果计数失败，直接返回-1
+
+    不同的地方在于，为了计数，这里又有新的独立性质渲染层：储存整数的、与grid对应的二维向量组，这里默认每个格子里储存-1，起始点为0，只有当false-true的逻辑生效，自动同步在前一父代的格子基础上+1，达到阶梯式增加的步数计数功能
+
+}   输出：整数值/独立渲染
+
+
+## findShortestPath
+- 目的：
+
+- 逻辑：输入（
+    与上面一致
+）{
+    前部分基本逻辑还是和上面的类似，不过由于需要找到最短路径，所以会再新建一个独立性质渲染，这层渲染专门用于储存每一个walkable坐标的父坐标是谁：std::vector<std::vector<Position>> parent
+
+    if(!isWalkable(grid, start) ||
+       !isWalkable(grid, target)){
+        return {};
+       }
+    
+    对应的初始化就是{-1, -1}
+
+    在while循环中的for循环里，这里用Position next: getWalkableNeighbors(),而不是i标号，这里直接循环position本身
+
+    在while循环后，依旧老规矩，如果循环完了还是达不到目的地，也要返回一个值给函数，接下来是按照父子关系逆向整理整个path：
+    - 首先初始化path，将确认已经可以被达到的目的地赋值给追踪器trace
+    - 由于一个父代可以有多个子代，但是一个子代只能有一个父代，于是逆向追踪必然是唯一的一条path
+    - while循环，只要这个追踪器还没有逆向到atart，就把这个trace push_back到path中，再修改trace为再往前的父代
+    - 但由于while的判断是基于trace是否和start一致进行的，而trace的添加是在while中进行的，于是执行到最后，会出现末尾无法进入循环内部执行相关操作的状况，所以需要单独加一下
+    - 直到相同后，得到一条反向的path，我们需要把它翻过来，用std::reverse(path.begin(), path.end());
+    「为何begin和end后面要加个括号呢？是为了格式统一吗？还是的确可以加点什么东西」
+
+}   输出：向量
+
+
+## makeTestMap
+- 目的：在自动化前，建立可以手动检验的小型测试地图
+
+- 逻辑：输入（  
+    不需要输入，我成尊便是了
+）{
+    依旧初始化，不过这里先全部初始化为obstacle
+    用双层for循环，规定解锁的小型区域
+
+    再手动规定几个obstacle，返回grid
+}
+
+
+## check
+- 目的：建立一套统一的检查小代码块，便于在
+
+- 逻辑：输入（
+    需要输入一个自身携带布尔值的condition，然后是一个你在判断什么的一个文字解释，这个解释直接constantly引用外部的东西，不修改；最后直接引用外部的failedcount参数，这里是需要做累加的，所以说每次check引用的都是同一个failedcount
+）{
+    check函数本身的执行其实是在输入里的，里面的condition相当于是一个执行器，其本身会得到一个bool值，而后根据这个bool值，在check内直接判断是输出pass还是fail
+
+    pass和fail比较，是直接以if作为判断逻辑，去判断condition的布尔值：如果真，直接输出pass；如果不是，则不用额外添加语句，只需后面直接对failedcount加一，再直接输出fail
+
+    问题在于，这个check函数似乎只能检查自身携带布尔值的东西？有待改进
+
+}   输出：一串解释
+
+
+## runchecks
+对runchecks函数不想过多解释，因为我也不想看，这就是对不同的一些并列情况进行了一个check调试，应该不重要
+
+
+## practicePriorityQueue
+傻逼函数，没啥意义，纯展示Dijkstra算法逻辑
+
+
+## manhattenDistance
+对应坐标之差绝对值的和 std::abs（）
+
+struct SearchEntry {
+    Position position;
+    int g;
+    int f;
+};这是一个结构型的变量，是人为定义出来的，有SearchEntry.position, g为已知的代价/已经发生的代价，f为总代价
+
+struct LowerPriority {
+    bool operator()(
+        const SearchEntry& a,
+        const SearchEntry& b
+    ) const {
+        return a.f > b.f;
+    }
+}; 看不懂
+
+
+## findPathStar
+- 目的：也是找一条路径，不过采用的是AStar算法
+
+- 逻辑：输入（
+    外部地图和两个坐标，不必赘述
+）{
+    检查输入的两个坐标是否是不合法的，然后再进入下面的判断
+    初始化：
+    - 一份二维向量组代价表，未被探索的全部定义为-1
+    - 一份前驱表，记录position
+    - 一个优先队列，我还是看不懂，总之名字同样是pending/里面储存SearchEntry类型的变量，以向量的方式储存，并使用LowerPriority进行排序。LowerPriority是一种最小堆排列？不清楚，不了解
+
+    start的代价改为0，然后把初始位置打包成一个SearchEntry，g=0，f=g+manhattenDistance()即预期的总代价 / 并把这个打包push进优先队列中
+
+    定义一个为false的found，有何用？
+
+    进入!pending.empty的while循环，开始边放边拿优先队列中的东西去做判断：
+    - 首先把优先队列中第一个向量拿出来，放进SE型的current里，拿完后就删了 ——top/pop，当然，这里一开始拿的肯定是start，毕竟也没有其他的SE了
+    - 由于需要做邻居判断，所以要把current的position放进position里
+    - 且如果current的已知代价不等于最低代价，说明有一条路的代价更低，就直接跳过当前的SE。这行代码是在做 “过期队列元素检查”，也叫 lazy deletion / 惰性删除 —— 
+    - 内部四方for循环，邻居检验；注意这里是假设有多条路径，所以要比较old与nex的g代价
+    
+    循环出来就来个尾部处理、后面就是正常的findshortestPath的尾部函数，转换path的前后
+
+}   输出：向量组path
+
+
+## isVaildPath
+- 目的：判断生成出来的path是否合法
+【我十分怀疑这个函数的必要性，path生成时都这么分门别类了，怎么可能还有问题？】
 
 
 

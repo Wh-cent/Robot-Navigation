@@ -8,6 +8,7 @@
 #include <string>
 #include <functional>
 #include <utility>
+#include <cstdlib>
 
 int randomInt (int minValue, int maxValue){
     static std::random_device randomDevice;
@@ -484,6 +485,8 @@ std::vector<Position> findShortestPath(
         return {};
     }
 
+    std::queue<Position> pending;
+
     std::vector<std::vector<int>> distance(
         ROWS, std::vector<int>(COLS, -1)
     );
@@ -492,8 +495,6 @@ std::vector<Position> findShortestPath(
         ROWS,
         std::vector<Position>(COLS, Position{-1, -1})
     );
-
-    std::queue<Position> pending;
 
     distance[start.row][start.col] = 0;
     pending.push(start);
@@ -817,38 +818,273 @@ void practicePriorityQueue() {
     }
 }
 
+int manhattanDistance(Position a, Position b) {
+    return std::abs(a.row - b.row)
+         + std::abs(a.col - b.col);
+}
+
+struct SearchEntry {
+    Position position;
+    int g;
+    int f;
+};
+
+struct LowerPriority {
+    bool operator()(
+        const SearchEntry& a,
+        const SearchEntry& b
+    ) const {
+        return a.f > b.f;
+    }
+};
+
+std::vector<Position> findPathAStar(
+    const Grid& grid,
+    Position start,
+    Position target
+) {
+    if (!isWalkable(grid, start) ||
+        !isWalkable(grid, target)) {
+        return {};
+    }
+
+    std::vector<std::vector<int>> bestG(
+        ROWS, std::vector<int>(COLS, -1)
+    );
+
+    std::vector<std::vector<Position>> parent(
+        ROWS,
+        std::vector<Position>(COLS, Position{-1, -1})
+    );
+
+    std::priority_queue<
+        SearchEntry,
+        std::vector<SearchEntry>,
+        LowerPriority
+    > pending;
+
+    bestG[start.row][start.col] = 0;
+
+    pending.push(SearchEntry{
+        start,
+        0,
+        manhattanDistance(start, target)
+    });
+
+    bool found = false;
+
+    while (!pending.empty()) {
+        SearchEntry current = pending.top();
+        pending.pop();
+
+        Position position = current.position;
+
+        if (current.g != bestG[position.row][position.col]) {
+            continue;
+        }
+
+        if (isSamePosition(position, target)) {
+            found = true;
+            break;
+        }
+
+        for (Position next :
+             getWalkableNeighbors(grid, position)) {
+            int newG = current.g + 1;
+            int oldG = bestG[next.row][next.col];
+
+            if (oldG == -1 || newG < oldG) {
+                bestG[next.row][next.col] = newG;
+                parent[next.row][next.col] = position;
+
+                int h = manhattanDistance(next, target);
+
+                pending.push(SearchEntry{
+                    next,
+                    newG,
+                    newG + h
+                });
+            }
+        }
+    }
+
+    if (!found) {
+        return {};
+    }
+
+    std::vector<Position> path;
+    Position trace = target;
+
+    while (!isSamePosition(trace, start)) {
+        path.push_back(trace);
+        trace = parent[trace.row][trace.col];
+    }
+
+    path.push_back(start);
+    std::reverse(path.begin(), path.end());
+
+    return path;
+}
+
+bool isValidPath(
+    const Grid& grid,
+    const std::vector<Position>& path,
+    Position start,
+    Position target
+) {
+    if (path.empty()) {
+        return false;
+    }
+
+    if (!isSamePosition(path.front(), start) ||
+        !isSamePosition(path.back(), target)) {
+        return false;
+    }
+
+    for (Position position : path) {
+        if (!isWalkable(grid, position)) {
+            return false;
+        }
+    }
+
+    for (std::size_t i = 1; i < path.size(); ++i) {
+        int rowChange =
+            std::abs(path[i].row - path[i - 1].row);
+
+        int colChange =
+            std::abs(path[i].col - path[i - 1].col);
+
+        if (rowChange + colChange != 1) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void checkSearchCase(
+    const Grid& grid,
+    Position start,
+    Position target,
+    int expectedSteps,
+    const std::string& name,
+    int& failedCount
+) {
+    std::vector<Position> bfsPath =
+        findShortestPath(grid, start, target);
+
+    std::vector<Position> astarPath =
+        findPathAStar(grid, start, target);
+
+    if (expectedSteps < 0) {
+        check(
+            bfsPath.empty() && astarPath.empty(),
+            name + "：两者均返回空路径",
+            failedCount
+        );
+        return;
+    }
+
+    check(
+        isValidPath(grid, bfsPath, start, target) &&
+        isValidPath(grid, astarPath, start, target),
+        name + "：两条路径均合法",
+        failedCount
+    );
+
+    std::size_t expectedSize = expectedSteps + 1;
+
+    check(
+        bfsPath.size() == expectedSize &&
+        astarPath.size() == expectedSize,
+        name + "：两者步数均符合预期",
+        failedCount
+    );
+}
+
+int runAStarChecks() {
+    int failedCount = 0;
+
+    Grid base = makeTestMap();
+
+    checkSearchCase(
+        base, {0, 0}, {3, 4}, 7,
+        "可达样例", failedCount
+    );
+
+    Grid detour(
+        ROWS,
+        std::vector<Cell>(COLS, Cell::Free)
+    );
+
+    detour[0][1] = Cell::Obstacle;
+    detour[1][1] = Cell::Obstacle;
+
+    checkSearchCase(
+        detour, {0, 0}, {0, 2}, 6,
+        "绕路样例", failedCount
+    );
+
+    Grid blocked = makeTestMap();
+    blocked[3][3] = Cell::Obstacle;
+
+    checkSearchCase(
+        blocked, {0, 0}, {3, 4}, -1,
+        "不可达样例", failedCount
+    );
+
+    checkSearchCase(
+        base, {0, 0}, {0, 0}, 0,
+        "起终点相同", failedCount
+    );
+
+    checkSearchCase(
+        base, {1, 0}, {1, 0}, -1,
+        "相同但位于障碍", failedCount
+    );
+
+    checkSearchCase(
+        base, {-1, 0}, {3, 4}, -1,
+        "起点越界", failedCount
+    );
+
+    std::cout << "A* 失败检查数："
+              << failedCount << '\n';
+
+    if (failedCount == 0) {
+        return 0;
+    }
+
+    return 1;
+}
+
+Grid makeFinalMap(bool detourOpen)
+{
+    Grid grid(
+        ROWS,
+        std::vector<Cell>(COLS, Cell::Obstacle)
+    );
+
+    const std::vector<Position> freeCells{
+        {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5},
+        {2, 3}, {2, 5},
+        {3, 3}, {3, 4}, {3, 5}
+    };
+
+    for (Position position : freeCells) {
+        grid[position.row][position.col] = Cell::Free;
+    }
+
+    if (!detourOpen) {
+        grid[2][5] = Cell::Obstacle;
+    }
+
+    return grid;
+}
+
 int main() 
 {
 
-    const bool runAutomaticChecks = true;
-
-    if (runAutomaticChecks) {
-        return runChecks();
-    }
-
-
-    Grid grid = makeTestMap();
-
-    Position robot{0, 0};
-    Position target{3, 4};
-
-    Position beforePlanning = robot;
-
-    std::vector<Position> path =
-        findShortestPath(grid, robot, target);
-
-    std::cout << "规划后位置是否不变："
-            << isSamePosition(robot, beforePlanning)
-            << '\n';
-
-    bool completed =
-        executePath(grid, robot, path);
-
-    std::cout << "路径是否执行完："
-            << completed << '\n';
-
-    std::cout << "是否到达指定目标："
-            << isSamePosition(robot, target)
-            << '\n';
+return 0;
 
 }
